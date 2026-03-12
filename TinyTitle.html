@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tiny Tiles</title>
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --panel: #151515;
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #fff;
+      --muted: #b9b9b9;
+      --accent: #73d0ff;
+      --danger: #ff6b6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body { overflow: hidden; }
+
+    #app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      height: 100%;
+    }
+
+    #controls {
+      border-right: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--panel), #101010);
+      padding: 16px;
+      overflow: auto;
+    }
+
+    #preview {
+      padding: 16px;
+      overflow: auto;
+      background: #0d0d0d;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0 0 14px;
+    }
+
+    .section {
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+
+    input[type="file"],
+    select,
+    input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      background: #0e0e0e;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    input[type="checkbox"] {
+      transform: translateY(1px);
+    }
+
+    button {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #111;
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:hover { background: #1a1a1a; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .danger-btn {
+      border-color: rgba(255, 107, 107, 0.45);
+    }
+
+    .danger-btn.active {
+      background: rgba(255, 107, 107, 0.18);
+      border-color: var(--danger);
+      color: #fff;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .tiny {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .status {
+      font-size: 13px;
+      line-height: 1.35;
+      color: #d6d6d6;
+    }
+
+    .status.blackout {
+      color: #ffb3b3;
+      font-weight: 700;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 5px;
+    }
+
+    .kv b {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #111;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+    }
+
+    .preview-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .scene-meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+
+    .line-chip {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 10px;
+    }
+
+    .text {
+      font-size: 34px;
+      line-height: 1.18;
+      white-space: pre-line;
+    }
+
+    .next .text {
+      font-size: 26px;
+    }
+
+    .subtle {
+      opacity: 0.65;
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .toggle-list {
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .scene-jump {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+    }
+
+    .scene-jump button {
+      width: auto;
+      padding: 10px 12px;
+    }
+
+    .inline-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="controls">
+      <h1>🎭 Tiny Titles</h1>
+
+      <div class="section">
+        <label class="label">Upload bundled block JSON</label>
+        <input id="fileInput" type="file" accept=".json,application/json">
+        <div class="tiny" style="margin-top:8px">
+          Use the output from <code>bundle-json-blocks.py --lines=3</code>.
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="status" id="status">No script loaded.</div>
+        <div style="margin-top:10px" class="kv"><b>Play</b><span id="playTitle">—</span></div>
+        <div class="kv"><b>Scene</b><span id="sceneName">—</span></div>
+        <div class="kv"><b>Block</b><span id="positionInfo">—</span></div>
+      </div>
+
+      <div class="section">
+        <label class="label">Jump to scene</label>
+        <div class="scene-jump">
+          <select id="sceneSelect" disabled></select>
+          <button id="prevSceneBtn" disabled>↑</button>
+          <button id="nextSceneBtn" disabled>↓</button>
+        </div>
+        <button id="goSceneBtn" disabled style="margin-top:10px">Go to scene start</button>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <div>
+            <label class="label">Projection language</label>
+            <select id="projectionLanguage">
+              <option value="english">English</option>
+              <option value="marathi">Marathi</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Preview language</label>
+            <select id="previewLanguage">
+              <option value="english">English</option>
+              <option value="marathi">Marathi</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label class="label">Next preview blocks</label>
+            <select id="previewCount">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Show speaker</label>
+            <div class="toggle-list">
+              <label><input type="checkbox" id="showSpeakerProj" checked> Projection</label>
+              <label><input type="checkbox" id="showSpeakerPreview" checked> Preview</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <button id="openShowBtn" disabled>Open projector window</button>
+
+        <button id="blackoutBtn" class="danger-btn" disabled style="margin-top:10px">
+          Blackout projector (B)
+        </button>
+
+        <div class="inline-note" id="blackoutHint">
+          Toggles black screen only. Does not change current block.
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label class="label">Font size</label>
+            <input id="fontSize" type="range" min="5" max="120" value="56">
+            <div class="tiny">Current: <span id="fontSizeValue">56</span> px</div>
+          </div>
+          <div>
+            <label class="label">Vertical offset</label>
+            <input id="offset" type="range" min="0" max="35" value="10">
+            <div class="tiny">Current: <span id="offsetValue">10</span> vh</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section tiny">
+        <div><span class="kbd">→</span> next block</div>
+        <div><span class="kbd">←</span> previous block</div>
+        <div><span class="kbd">↓</span> next scene</div>
+        <div><span class="kbd">↑</span> previous scene</div>
+        <div><span class="kbd">Space</span> next block</div>
+        <div><span class="kbd">B</span> blackout toggle</div>
+        <div><span class="kbd">F</span> fullscreen projector</div>
+      </div>
+    </div>
+
+    <div id="preview">
+      <div class="preview-card">
+        <div class="scene-meta" id="sceneMeta">Load the bundled block JSON to begin.</div>
+        <div class="line-chip" id="currentIndexLabel"></div>
+        <div class="text" id="currentText"></div>
+      </div>
+      <div id="nextContainer" class="stack"></div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      script: null,
+      scenes: [],
+      currentSceneIdx: 0,
+      currentBlockIdx: 0,
+      showWin: null,
+      blackout: false
+    };
+
+    const els = {
+      fileInput: document.getElementById('fileInput'),
+      sceneSelect: document.getElementById('sceneSelect'),
+      goSceneBtn: document.getElementById('goSceneBtn'),
+      prevSceneBtn: document.getElementById('prevSceneBtn'),
+      nextSceneBtn: document.getElementById('nextSceneBtn'),
+      projectionLanguage: document.getElementById('projectionLanguage'),
+      previewLanguage: document.getElementById('previewLanguage'),
+      previewCount: document.getElementById('previewCount'),
+      showSpeakerProj: document.getElementById('showSpeakerProj'),
+      showSpeakerPreview: document.getElementById('showSpeakerPreview'),
+      openShowBtn: document.getElementById('openShowBtn'),
+      blackoutBtn: document.getElementById('blackoutBtn'),
+      fontSize: document.getElementById('fontSize'),
+      offset: document.getElementById('offset'),
+      fontSizeValue: document.getElementById('fontSizeValue'),
+      offsetValue: document.getElementById('offsetValue'),
+      status: document.getElementById('status'),
+      playTitle: document.getElementById('playTitle'),
+      sceneName: document.getElementById('sceneName'),
+      positionInfo: document.getElementById('positionInfo'),
+      sceneMeta: document.getElementById('sceneMeta'),
+      currentIndexLabel: document.getElementById('currentIndexLabel'),
+      currentText: document.getElementById('currentText'),
+      nextContainer: document.getElementById('nextContainer')
+    };
+
+    function currentScene() {
+      return state.scenes[state.currentSceneIdx] || null;
+    }
+
+    function currentBlocks() {
+      return currentScene()?.blocks || [];
+    }
+
+    function currentBlock() {
+      return currentBlocks()[state.currentBlockIdx] || null;
+    }
+
+    function clampBlockIdx() {
+      const blocks = currentBlocks();
+      if (!blocks.length) {
+        state.currentBlockIdx = 0;
+        return;
+      }
+      state.currentBlockIdx = Math.max(0, Math.min(blocks.length - 1, state.currentBlockIdx));
+    }
+
+    function itemSpeaker(item, language) {
+      if (item?.is_event) return item.event || '';
+
+      const sm = item?.speaker_marathi || '';
+      const se = item?.speaker_english || '';
+
+      if (language === 'marathi') return sm;
+      if (language === 'english') return se;
+      if (sm && se && sm !== se) return `${se} / ${sm}`;
+      return se || sm;
+    }
+
+    function itemText(item, language) {
+      if (!item) return '';
+      if (item.is_event) return item.event || '';
+
+      const m = item.marathi || '';
+      const e = item.english || '';
+
+      if (language === 'marathi') return m;
+      if (language === 'english') return e;
+      if (m && e) return `${e}\n${m}`;
+      return e || m;
+    }
+
+    function formatBlockText(block, language, showSpeaker) {
+      if (!block) return '';
+
+      return (block.items || [])
+        .map(item => {
+          const text = (itemText(item, language) || '').trim();
+          if (!text) return '';
+
+          if (!showSpeaker || item.is_event) return text;
+
+          const speaker = itemSpeaker(item, language);
+          return speaker ? `${speaker}: ${text}` : text;
+        })
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    function updateBlackoutUI() {
+      if (state.blackout) {
+        els.blackoutBtn.classList.add('active');
+        els.blackoutBtn.textContent = 'Blackout ON (B)';
+        els.status.classList.add('blackout');
+      } else {
+        els.blackoutBtn.classList.remove('active');
+        els.blackoutBtn.textContent = 'Blackout projector (B)';
+        els.status.classList.remove('blackout');
+      }
+    }
+
+    function updateMeta() {
+      const scene = currentScene();
+      const block = currentBlock();
+      const blocks = currentBlocks();
+
+      els.playTitle.textContent = state.script?.play_title || '—';
+      els.sceneName.textContent = scene ? `Scene ${scene.scene_index}: ${scene.scene_title || ''}` : '—';
+      els.positionInfo.textContent = block ? `Block ${state.currentBlockIdx + 1} of ${blocks.length}` : '—';
+
+      if (state.script) {
+        const base = `Loaded ${state.scenes.length} scenes • ${state.script.lines_per_block || '—'} lines per block.`;
+        els.status.textContent = state.blackout ? `${base} PROJECTOR BLACKOUT ACTIVE.` : base;
+      } else {
+        els.status.textContent = 'No script loaded.';
+      }
+
+      if (scene) {
+        const location = scene.location?.trim() ? `Location: ${scene.location}` : '';
+        const notes = scene.notes?.trim() ? `Notes: ${scene.notes}` : '';
+        const blackoutText = state.blackout ? 'PROJECTOR BLACKOUT ACTIVE' : '';
+
+        els.sceneMeta.textContent = [
+          `Scene ${scene.scene_index}${scene.scene_title ? ' — ' + scene.scene_title : ''}`,
+          location,
+          notes,
+          blackoutText
+        ].filter(Boolean).join(' • ');
+      } else {
+        els.sceneMeta.textContent = 'Load the bundled block JSON to begin.';
+      }
+
+      updateBlackoutUI();
+    }
+
+    function renderOperator() {
+      updateMeta();
+
+      const block = currentBlock();
+
+      els.currentIndexLabel.textContent = block
+        ? `CURRENT • scene ${currentScene().scene_index} • block ${block.block_index} • lines ${block.from_line_index}-${block.to_line_index}`
+        : '';
+
+      els.currentText.textContent = block
+        ? formatBlockText(block, els.previewLanguage.value, els.showSpeakerPreview.checked)
+        : '';
+
+      els.nextContainer.innerHTML = '';
+
+      const blocks = currentBlocks();
+      const previewCount = Math.max(1, parseInt(els.previewCount.value || '2', 10));
+
+      for (
+        let i = state.currentBlockIdx + 1;
+        i < blocks.length && i <= state.currentBlockIdx + previewCount;
+        i++
+      ) {
+        const blk = blocks[i];
+
+        const card = document.createElement('div');
+        card.className = 'preview-card next subtle';
+
+        const chip = document.createElement('div');
+        chip.className = 'line-chip';
+        chip.textContent = `NEXT • block ${blk.block_index} • lines ${blk.from_line_index}-${blk.to_line_index}`;
+
+        const tx = document.createElement('div');
+        tx.className = 'text';
+        tx.textContent = formatBlockText(blk, els.previewLanguage.value, els.showSpeakerPreview.checked);
+
+        card.appendChild(chip);
+        card.appendChild(tx);
+        els.nextContainer.appendChild(card);
+      }
+    }
+
+    function syncSceneSelect() {
+      els.sceneSelect.value = String(state.currentSceneIdx);
+    }
+
+    function populateSceneSelect() {
+      els.sceneSelect.innerHTML = '';
+
+      state.scenes.forEach((scene, idx) => {
+        const opt = document.createElement('option');
+        opt.value = String(idx);
+        opt.textContent = `Scene ${scene.scene_index}${scene.scene_title ? ' — ' + scene.scene_title : ''}`;
+        els.sceneSelect.appendChild(opt);
+      });
+
+      const enabled = state.scenes.length > 0;
+
+      els.sceneSelect.disabled = !enabled;
+      els.goSceneBtn.disabled = !enabled;
+      els.prevSceneBtn.disabled = !enabled;
+      els.nextSceneBtn.disabled = !enabled;
+      els.openShowBtn.disabled = !enabled;
+      els.blackoutBtn.disabled = !enabled;
+
+      syncSceneSelect();
+    }
+
+    function projectorPayload() {
+      const block = currentBlock();
+
+      return {
+        type: 'STATE',
+        sceneIndex: currentScene()?.scene_index || null,
+        sceneTitle: currentScene()?.scene_title || '',
+        text: state.blackout
+          ? ''
+          : (block ? formatBlockText(block, els.projectionLanguage.value, els.showSpeakerProj.checked) : ''),
+        fontSize: parseInt(els.fontSize.value, 10),
+        offset: parseInt(els.offset.value, 10),
+        blackout: state.blackout
+      };
+    }
+
+    const PROJECTOR_HTML = `
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Projector</title>
+  <style>
+    :root {
+      --fontSize: 56px;
+      --offset: 10vh;
+      --maxWidth: 88vw;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    #stage {
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 4vh;
+      transform: translateY(calc(var(--offset) * -1));
+      background: #000;
+    }
+
+    #textWrap {
+      width: var(--maxWidth);
+      text-align: center;
+    }
+
+    #text {
+      display: inline-block;
+      max-width: 100%;
+      font-size: var(--fontSize);
+      font-weight: 750;
+      line-height: 1.14;
+      white-space: pre-line;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="textWrap">
+      <div id="text"></div>
+    </div>
+  </div>
+
+  <script>
+    const el = document.getElementById('text');
+
+    function render(data) {
+      document.documentElement.style.setProperty('--fontSize', (data.fontSize || 56) + 'px');
+      document.documentElement.style.setProperty('--offset', (data.offset || 10) + 'vh');
+      el.textContent = data.text || '';
+      document.body.style.background = '#000';
+    }
+
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'STATE') render(e.data);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'f') {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+
+      if (!window.opener) return;
+
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        window.opener.postMessage({ type: 'NEXT' }, '*');
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+        e.preventDefault();
+        window.opener.postMessage({ type: 'PREV' }, '*');
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        window.opener.postMessage({ type: 'PREV_SCENE' }, '*');
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        window.opener.postMessage({ type: 'NEXT_SCENE' }, '*');
+      }
+      if (e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        window.opener.postMessage({ type: 'BLACKOUT_TOGGLE' }, '*');
+      }
+    });
+  <\/script>
+</body>
+</html>
+`;
+
+    function buildProjector(win) {
+      win.document.open();
+      win.document.write(PROJECTOR_HTML);
+      win.document.close();
+    }
+
+    function ensureProjector() {
+      if (state.showWin && !state.showWin.closed) return state.showWin;
+
+      const win = window.open('', 'Projector', 'width=1280,height=720');
+      if (!win) {
+        alert('Popup blocked. Allow popups for this page.');
+        return null;
+      }
+
+      buildProjector(win);
+      state.showWin = win;
+      return win;
+    }
+
+    function pushProjector() {
+      const win = ensureProjector();
+      if (!win) return;
+      win.postMessage(projectorPayload(), '*');
+    }
+
+    function renderAll() {
+      clampBlockIdx();
+      renderOperator();
+      if (state.showWin && !state.showWin.closed) {
+        pushProjector();
+      }
+    }
+
+    function advance(delta) {
+      const blocks = currentBlocks();
+      if (!blocks.length) return;
+
+      state.currentBlockIdx = Math.max(
+        0,
+        Math.min(blocks.length - 1, state.currentBlockIdx + delta)
+      );
+
+      renderAll();
+    }
+
+    function changeScene(delta) {
+      if (!state.scenes.length) return;
+
+      state.currentSceneIdx = Math.max(
+        0,
+        Math.min(state.scenes.length - 1, state.currentSceneIdx + delta)
+      );
+      state.currentBlockIdx = 0;
+
+      syncSceneSelect();
+      renderAll();
+    }
+
+    function goToSceneStart(sceneArrayIndex) {
+      if (!state.scenes.length) return;
+
+      state.currentSceneIdx = Math.max(
+        0,
+        Math.min(state.scenes.length - 1, sceneArrayIndex)
+      );
+      state.currentBlockIdx = 0;
+
+      syncSceneSelect();
+      renderAll();
+    }
+
+    function toggleBlackout() {
+      if (!state.scenes.length) return;
+      state.blackout = !state.blackout;
+      renderAll();
+    }
+
+    function loadScriptObject(obj) {
+      state.script = obj;
+      state.scenes = Array.isArray(obj?.scenes)
+        ? obj.scenes.slice().sort((a, b) => (a.scene_index || 0) - (b.scene_index || 0))
+        : [];
+      state.currentSceneIdx = 0;
+      state.currentBlockIdx = 0;
+      state.blackout = false;
+
+      populateSceneSelect();
+      renderAll();
+    }
+
+    els.fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const text = await file.text();
+      const obj = JSON.parse(text);
+      loadScriptObject(obj);
+    });
+
+    els.goSceneBtn.addEventListener('click', () => {
+      goToSceneStart(parseInt(els.sceneSelect.value || '0', 10));
+    });
+
+    els.prevSceneBtn.addEventListener('click', () => changeScene(-1));
+    els.nextSceneBtn.addEventListener('click', () => changeScene(1));
+    els.blackoutBtn.addEventListener('click', toggleBlackout);
+
+    els.openShowBtn.addEventListener('click', () => {
+      ensureProjector();
+      pushProjector();
+    });
+
+    [
+      els.projectionLanguage,
+      els.previewLanguage,
+      els.previewCount,
+      els.showSpeakerProj,
+      els.showSpeakerPreview
+    ].forEach(el => el.addEventListener('input', renderAll));
+
+    els.fontSize.addEventListener('input', () => {
+      els.fontSizeValue.textContent = els.fontSize.value;
+      pushProjector();
+    });
+
+    els.offset.addEventListener('input', () => {
+      els.offsetValue.textContent = els.offset.value;
+      pushProjector();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (!state.scenes.length) return;
+      if (e.target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        advance(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+        e.preventDefault();
+        advance(-1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        changeScene(-1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        changeScene(1);
+      } else if (e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleBlackout();
+      }
+    });
+
+    window.addEventListener('message', (e) => {
+      const type = e.data?.type;
+
+      if (type === 'NEXT') advance(1);
+      else if (type === 'PREV') advance(-1);
+      else if (type === 'NEXT_SCENE') changeScene(1);
+      else if (type === 'PREV_SCENE') changeScene(-1);
+      else if (type === 'BLACKOUT_TOGGLE') toggleBlackout();
+    });
+
+    els.fontSizeValue.textContent = els.fontSize.value;
+    els.offsetValue.textContent = els.offset.value;
+    renderAll();
+  </script>
+</body>
+</html>
