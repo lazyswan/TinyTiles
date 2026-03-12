@@ -12,6 +12,7 @@ For every scene, create separate json file in below format, using AI assistant f
 
 #### Why this weird format ?
  * Mapping helps our tool to preview and project in language of our choice
+ * It give lot of control over dialogue cues
  * This mapping is also AI generated, so no efforts, 
    we just dump the original scenes request our friend GPT / Gemini to generate translation in this format.
 ```bash
