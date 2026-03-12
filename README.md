@@ -110,3 +110,7 @@ scsapre: TinyTitles %
 
 * open TinyTitle.html on chrome / browser
 * upload the generated bundled file into it
+<img width="718" height="323" alt="image" src="https://github.com/user-attachments/assets/e4574f82-6afa-4678-80dd-57ca3be0613a" />
+<img width="1434" height="789" alt="image" src="https://github.com/user-attachments/assets/7558dc8d-b627-4ba0-b5e9-ede11053124a" />
+
+
